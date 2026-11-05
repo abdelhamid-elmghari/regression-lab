@@ -1,172 +1,121 @@
-# Machine Learning Data Preprocessing on the Titanic Dataset
+# Prétraitement des données sur le dataset du Titanic
 
-## Overview
+## Aperçu
 
-This project presents a complete data preprocessing pipeline applied to the classic Titanic passenger dataset. In machine learning workflows, raw data is rarely ready for model training. Real-world datasets often suffer from missing entries, extreme outliers, non-standard numerical distributions, categorical variables, and class imbalances.
+Ce projet présente un pipeline complet de prétraitement des données appliqué au jeu de données classique des passagers du Titanic. Dans les flux de travail de Machine Learning, les données brutes sont rarement prêtes pour l'entraînement des modèles. Les datasets du monde réel souffrent souvent de valeurs manquantes, de valeurs aberrantes extrêmes, de distributions numériques non standard, de variables catégorielles et de déséquilibres de classes.
 
-The goal of this work is to systematically address each of these challenges to produce a clean, balanced, and well-scaled feature set ready for downstream classification algorithms.
-
----
-
-## Dataset Description
-
-The dataset consists of passenger records from the RMS Titanic. The primary objective is to predict whether a passenger survived (`Survived = 1`) or perished (`Survived = 0`).
-
-Key attributes included in the raw dataset:
-* PassengerId: Unique identifier for each traveler
-* Survived: Target variable (0 = No, 1 = Yes)
-* Pclass: Ticket class (1st, 2nd, 3rd)
-* Name: Full passenger name including titles (Mr., Mrs., Miss., Master, etc.)
-* Sex: Passenger gender
-* Age: Passenger age in years
-* SibSp: Number of siblings or spouses aboard
-* Parch: Number of parents or children aboard
-* Ticket: Ticket number string
-* Fare: Passenger fare in British pounds
-* Cabin: Cabin number
-* Embarked: Port of embarkation (C = Cherbourg, Q = Queenstown, S = Southampton)
+L'objectif de ce travail est de traiter systématiquement chacun de ces défis afin de produire un ensemble de caractéristiques propre, équilibré et bien mis à l'échelle, prêt pour les algorithmes de classification en aval.
 
 ---
 
-## Preprocessing Steps
+## Description du dataset
 
-### 1. Data Cleaning and Missing Value Imputation
+Le dataset est constitué des dossiers des passagers du RMS Titanic. L'objectif principal est de prédire si un passager a survécu (`Survived = 1`) ou a péri (`Survived = 0`).
 
-Inspection of the dataset revealed missing values across three primary features:
-* **Age**: Missing in approximately 20% of rows. Because age is skewed by children and elderly individuals, replacing null values with the median (28.0) is more robust than using the mean, which is sensitive to extreme values. The values were subsequently rounded and cast to integer format.
-* **Cabin**: Over 77% of entries are null. Because imputing such a high proportion of missing data would introduce artificial noise, the feature was dropped from the analysis.
-* **Embarked**: Missing in only two records. These were filled with the statistical mode (`'S'`, Southampton), which represents the most frequent port of embarkation.
-
-In addition, feature extraction was performed on the `Name` column to pull out social titles (such as Mr, Mrs, Miss, Master, Dr, Rev) using regular expressions. This retains demographic signals prior to discarding raw string identifiers.
+Attributs clés inclus dans le dataset brut :
+- PassengerId : Identifiant unique de chaque voyageur
+- Survived : Variable cible (0 = Non, 1 = Oui)
+- Pclass : Classe du billet (1ère, 2ème, 3ème)
+- Name : Nom complet du passager incluant les titres (Mr., Mrs., Miss., Master, etc.)
+- Sex : Genre du passager
+- Age : Âge du passager en années
+- SibSp : Nombre de frères, sœurs ou conjoints à bord
+- Parch : Nombre de parents ou enfants à bord
+- Ticket : Chaîne de caractères du numéro de billet
+- Fare : Tarif payé par le passager en livres sterling
+- Cabin : Numéro de cabine
+- Embarked : Port d'embarquement (C = Cherbourg, Q = Queenstown, S = Southampton)
 
 ---
 
-### 2. Outlier Detection and Capping (IQR Method)
+## Étapes de prétraitement
 
-Numerical features, particularly `Fare` and `Age`, contain extreme values that can disproportionately distort linear and distance-based estimators. Rather than deleting these rows and discarding valuable data, the Interquartile Range (IQR) capping method was applied.
+### 1. Nettoyage des données et imputation des valeurs manquantes
 
-For any given feature:
-* Lower Bound = Q1 - 1.5 * IQR
-* Upper Bound = Q3 + 1.5 * IQR
+L'inspection du dataset a révélé des valeurs manquantes sur trois caractéristiques principales :
+- **Âge (Age)** : Manquant dans environ 20 % des lignes. L'âge étant influencé par les enfants et les personnes âgées, remplacer les valeurs nulles par la médiane (28,0) est plus robuste que d'utiliser la moyenne, qui est sensible aux valeurs extrêmes. Les valeurs ont ensuite été arrondies et converties au format entier.
+- **Cabine (Cabin)** : Plus de 77 % des entrées sont nulles. L'imputation d'une proportion aussi élevée de données manquantes introduisant un bruit artificiel, cette caractéristique a été supprimée de l'analyse.
+- **Embarquement (Embarked)** : Manquant dans seulement deux enregistrements. Ceux-ci ont été remplacés par le mode statistique (`'S'`, Southampton), qui représente le port d'embarquement le plus fréquent.
 
-Values outside these boundaries were clamped to the respective threshold limits.
+De plus, une extraction de caractéristiques a été effectuée sur la colonne `Name` pour isoler les titres sociaux (tels que Mr, Mrs, Miss, Master, Dr, Rev) à l'aide d'expressions régulières. Cela permet de conserver les signaux démographiques avant de supprimer les identifiants textuels bruts.
 
-#### Fare Distribution (Before vs. After Capping)
+---
 
-| Before Outlier Treatment | After Outlier Treatment |
+### 2. Détection et écrêtage des valeurs aberrantes (Méthode IQR)
+
+Les caractéristiques numériques, en particulier le tarif (`Fare`) et l'âge (`Age`), contiennent des valeurs extrêmes qui peuvent fausser de manière disproportionnée les estimateurs linéaires et basés sur la distance. Plutôt que de supprimer ces lignes et de perdre des données précieuses, la méthode d'écrêtage par l'écart interquartile (IQR) a été appliquée.
+
+Pour toute caractéristique donnée :
+- Limite inférieure = Q1 - 1,5 * IQR
+- Limite supérieure = Q3 + 1,5 * IQR
+
+Les valeurs situées en dehors de ces limites ont été ramenées aux seuils respectifs.
+
+#### Distribution du tarif (Avant vs. Après écrêtage)
+
+| Avant traitement des valeurs aberrantes | Après traitement des valeurs aberrantes |
 | :---: | :---: |
-| ![Fare Before Capping](images/boxplot_fare_before.png) | ![Fare After Capping](images/boxplot_fare_after.png) |
+| ![Tarif Avant Écrêtage](images/boxplot_fare_before.png) | ![Tarif Après Écrêtage](images/boxplot_fare_after.png) |
 
-Before capping, several passenger fares exceeded 200 and 500, creating an extreme right tail. Capping brings these extreme points to the upper statistical boundary without discarding the records.
+Avant l'écrêtage, plusieurs tarifs de passagers dépassaient 200 et 500, créant une queue à droite extrême. L'écrêtage ramène ces points extrêmes à la limite statistique supérieure sans rejeter les enregistrements.
 
-#### Age Distribution (Before vs. After Capping)
+#### Distribution de l'âge (Avant vs. Après écrêtage)
 
-| Before Outlier Treatment | After Outlier Treatment |
+| Avant traitement des valeurs aberrantes | Après traitement des valeurs aberrantes |
 | :---: | :---: |
-| ![Age Before Capping](images/boxplot_age_before.png) | ![Age After Capping](images/boxplot_age_after.png) |
+| ![Âge Avant Écrêtage](images/boxplot_age_before.png) | ![Âge Après Écrêtage](images/boxplot_age_after.png) |
 
-Extreme ages in the upper tail were bounded while preserving the core demographic spread.
+Les âges extrêmes de la queue supérieure ont été bornés tout en préservant la dispersion démographique principale.
 
-#### Family Features: SibSp and Parch
+#### Caractéristiques familiales : SibSp et Parch
 
-| Feature | Before Capping | After Capping |
+| Caractéristique | Avant Écrêtage | Après Écrêtage |
 | :--- | :---: | :---: |
-| **SibSp** | ![SibSp Before](images/boxplot_sibsp_before.png) | ![SibSp After](images/boxplot_sibsp_after.png) |
-| **Parch** | ![Parch Before](images/boxplot_parch_before.png) | ![Parch After](images/boxplot_parch_after.png) |
+| **SibSp** | ![SibSp Avant](images/boxplot_sibsp_before.png) | ![SibSp Après](images/boxplot_sibsp_after.png) |
+| **Parch** | ![Parch Avant](images/boxplot_parch_before.png) | ![Parch Après](images/boxplot_parch_after.png) |
 
 ---
 
-### 3. Feature Transformation and Scaling
+### 3. Transformation et mise à l'échelle des caractéristiques
 
-#### Categorical Encoding
-Machine learning algorithms operate on numerical tensors. Categorical attributes were converted using One-Hot Encoding (`pd.get_dummies`):
-* `Sex`: Converted into binary dummy columns (`Sex_female`, `Sex_male`).
-* `Embarked`: Converted into binary flags (`Embarked_C`, `Embarked_Q`, `Embarked_S`).
+#### Encodage catégoriel
+Les algorithmes de Machine Learning fonctionnent sur des tenseurs numériques. Les attributs catégoriels ont été convertis à l'aide de l'encodage One-Hot (`pd.get_dummies`) :
+- `Sex` : Converti en colonnes binaires factices (`Sex_female`, `Sex_male`).
+- `Embarked` : Converti en indicateurs binaires (`Embarked_C`, `Embarked_Q`, `Embarked_S`).
 
-#### Scaling and Normalization
-Features have fundamentally different units and magnitudes. Two complementary scaling techniques were evaluated:
-* **Min-Max Normalization**: Applied to `Fare` to compress values strictly into the `[0, 1]` interval.
-* **Standardization (Z-Score)**: Applied to `Age` to center the distribution around mean 0 with a unit standard deviation (variance = 1).
+#### Mise à l'échelle et normalisation
+Les caractéristiques ont des unités et des ordres de grandeur fondamentalement différents. Deux techniques de mise à l'échelle complémentaires ont été évaluées :
+- **Normalisation Min-Max** : Appliquée au tarif (`Fare`) pour compresser strictement les valeurs dans l'intervalle `[0, 1]`.
+- **Standardisation (Z-Score)** : Appliquée à l'âge (`Age`) pour centrer la distribution autour d'une moyenne de 0 avec un écart-type unitaire (variance = 1).
 
-![Feature Scaling Comparison](images/feature_scaling_comparison.png)
+![Comparaison de la mise à l'échelle des caractéristiques](images/feature_scaling_comparison.png)
 
-The comparative visualization above demonstrates the effect of both transformations:
-* Left panels show raw feature distributions before transformation.
-* Right panels show the scaled representations, making the features comparable for gradient-based or distance-based algorithms such as Logistic Regression, SVM, and KNN.
+La visualisation comparative ci-dessus démontre l'effet des deux transformations :
+- Les panneaux de gauche montrent les distributions des caractéristiques brutes avant transformation.
+- Les panneaux de droite montrent les représentations mises à l'échelle, rendant les caractéristiques comparables pour les algorithmes basés sur le gradient ou la distance, tels que la Régression Logistique, les SVM et les KNN.
 
 ---
 
-### 4. Handling Imbalanced Classes with SMOTE
+### 4. Gestion des classes déséquilibrées avec SMOTE
 
-In the raw Titanic dataset, passenger survival is unevenly distributed: approximately 61% of passengers did not survive, compared to 39% who survived. When models train on skewed targets, they often develop a bias toward predicting the majority class.
+Dans le dataset brut du Titanic, la survie des passagers est inégalement répartie : environ 61 % des passagers n'ont pas survécu, contre 39 % qui ont survécu. Lorsque les modèles s'entraînent sur des cibles biaisées, ils développent souvent un biais en faveur de la prédiction de la classe majoritaire.
 
-To remedy this, SMOTE (Synthetic Minority Over-sampling Technique) was applied to the training set. Rather than simple duplicate sampling, SMOTE synthesizes new plausible minority examples along the feature space vectors connecting k-nearest neighbors.
+Pour y remédier, la technique SMOTE (Synthetic Minority Over-sampling Technique) a été appliquée à l'ensemble d'entraînement. Plutôt qu'un simple échantillonnage en double, SMOTE synthétise de nouveaux exemples plausibles de la classe minoritaire le long des vecteurs de l'espace des caractéristiques reliant les k-plus proches voisins.
 
-#### Class Distribution Comparison
+#### Comparaison de la distribution des classes
 
-| Before SMOTE (Imbalanced) | After SMOTE (Balanced) |
+| Avant SMOTE (Déséquilibré) | Après SMOTE (Équilibré) |
 | :---: | :---: |
-| ![Distribution Before SMOTE](images/target_distribution_before_smote.png) | ![Distribution After SMOTE](images/target_distribution_after_smote.png) |
+| ![Distribution Avant SMOTE](images/target_distribution_before_smote.png) | ![Distribution Après SMOTE](images/target_distribution_after_smote.png) |
 
-As shown in the charts, SMOTE equalizes the class representation, providing an unbiased foundation for model evaluation and metric calculation (such as F1-score, Precision, and Recall).
+Comme le montrent les graphiques, SMOTE égalise la représentation des classes, fournissant une base non biaisée pour l'évaluation des modèles et le calcul des métriques (telles que le score F1, la précision et le rappel).
 
----
-
-## Repository Structure
-
-```text
-.
-├── .gitignore
-├── README.md
-├── Titanic-Dataset.csv
-├── pr-traitement-d-un-dataset-en-machine-learning.ipynb
-└── images/
-    ├── boxplot_age_after.png
-    ├── boxplot_age_before.png
-    ├── boxplot_fare_after.png
-    ├── boxplot_fare_before.png
-    ├── boxplot_parch_after.png
-    ├── boxplot_parch_before.png
-    ├── boxplot_sibsp_after.png
-    ├── boxplot_sibsp_before.png
-    ├── feature_scaling_comparison.png
-    ├── target_distribution_after_smote.png
-    └── target_distribution_before_smote.png
-```
-
----
-
-## Getting Started
-
-### Prerequisites
-
-You need Python 3.8 or higher installed on your system. The required libraries can be installed using pip:
-
-```bash
-pip install numpy pandas scikit-learn seaborn matplotlib imbalanced-learn jupyter
-```
-
-### Running the Notebook
-
-1. Clone or download this repository to your local machine:
-   ```bash
-   git clone https://github.com/<your-username>/<your-repo-name>.git
-   cd <your-repo-name>
-   ```
-
-2. Launch Jupyter Notebook or Jupyter Lab:
-   ```bash
-   jupyter notebook pr-traitement-d-un-dataset-en-machine-learning.ipynb
-   ```
-
-3. Execute the cells sequentially from top to bottom. The notebook will automatically read `Titanic-Dataset.csv` from the project directory.
-
----
+## Pour commencer
 
 ## Conclusion
 
-This preprocessing pipeline demonstrates the essential steps required to prepare raw tabular data for predictive modeling:
-1. Missing value handling tailored to feature distribution and percentage of nulls.
-2. IQR capping to mitigate extreme outlier influence without losing sample volume.
-3. Proper categorical encoding and appropriate scaling techniques (Min-Max vs. Standard Scaler).
-4. Addressing target imbalance using synthetic oversampling via SMOTE.
+Ce pipeline de prétraitement démontre les étapes essentielles requises pour préparer des données tabulaires brutes à la modélisation prédictive :
+1. Gestion des valeurs manquantes adaptée à la distribution des caractéristiques et au pourcentage de valeurs nulles.
+2. Écrêtage IQR pour atténuer l'influence des valeurs aberrantes extrêmes sans perdre de volume d'échantillons.
+3. Encodage catégoriel approprié et techniques de mise à l'échelle adéquates (Min-Max vs. Standard Scaler).
+4. Traitement du déséquilibre de la cible à l'aide d'un sur-échantillonnage synthétique via SMOTE.
