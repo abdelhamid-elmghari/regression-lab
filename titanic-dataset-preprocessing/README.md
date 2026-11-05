@@ -112,10 +112,5 @@ Comme le montrent les graphiques, SMOTE égalise la représentation des classes,
 
 ## Pour commencer
 
-## Conclusion
-
-Ce pipeline de prétraitement démontre les étapes essentielles requises pour préparer des données tabulaires brutes à la modélisation prédictive :
-1. Gestion des valeurs manquantes adaptée à la distribution des caractéristiques et au pourcentage de valeurs nulles.
-2. Écrêtage IQR pour atténuer l'influence des valeurs aberrantes extrêmes sans perdre de volume d'échantillons.
-3. Encodage catégoriel approprié et techniques de mise à l'échelle adéquates (Min-Max vs. Standard Scaler).
+aler).
 4. Traitement du déséquilibre de la cible à l'aide d'un sur-échantillonnage synthétique via SMOTE.
