@@ -1,156 +1,149 @@
-# Prétraitement d'un Dataset de Transactions Bancaires & Détection de Fraude
+# Pretraitement du Dataset de Transactions Bancaires
 
-## 📋 Aperçu du Projet
+## Apercu
 
-Ce projet propose un pipeline complet et rigoureux de **prétraitement des données (Data Preprocessing)** appliqué à un jeu de données de **transactions financières et de détection de fraude bancaire**. 
+Ce projet presente un pipeline de pretraitement de donnees applique a un jeu de transactions bancaires pour la detection de fraude.
 
-Dans les projets de Machine Learning appliqués à la finance, les données brutes comportent des défis majeurs :
-- **Valeurs manquantes et doublons techniques** ;
-- **Distributions asymétriques à forte queue** avec des montants extrêmes (outliers) ;
-- **Variables catégorielles hétérogènes** (canaux, appareils, régions géographiques) ;
-- **Fort déséquilibre de classes** (les fraudes représentent une minorité des transactions) ;
-- **Risques critiques de fuite d'information (*Data Leakage*)**, notamment par la présence de variables post-incident ou le calcul de paramètres de normalisation avant le découpage train/test.
-
-L'objectif de ce projet est de concevoir un pipeline robuste, modulaire et sérialisable, prêt pour la mise en production.
+Les defis traites dans ce projet :
+- Nettoyage des donnees : suppression des doublons et imputation des valeurs manquantes.
+- Prevention du Data Leakage : exclusion des identifiants et de la variable post-incident (`resultat_enquete`).
+- Gestion des valeurs extremes (outliers) : analyse par l'ecart interquartile (IQR) sur les montants.
+- Comparaison des scalers : evaluation de StandardScaler, MinMaxScaler et RobustScaler.
+- Desequilibre des classes : re-echantillonnage cible sur le groupe d'entrainement.
+- Pipeline de production : ColumnTransformer scikit-learn avec gestion des categories inconnues (`handle_unknown='ignore'`) et export Joblib.
 
 ---
 
-## 📊 Description du Dataset
+## Description du Dataset
 
-Le dataset `transactions-dataset.csv` recense des opérations bancaires détaillées :
+Le fichier `transactions-dataset.csv` contient 3 000 operations bancaires decrites par les attributs suivants :
 
-| Colonne | Type | Rôle / Description |
+| Variable | Type | Description |
 | :--- | :--- | :--- |
-| `id_operation` | Catégorique (Identifiant) | Identifiant unique de l'opération (clé technique arbitraire). |
-| `id_client` | Catégorique (Identifiant) | Identifiant unique du client bancaire. |
-| `montant_dh` | Numérique continu | Montant de la transaction en Dirhams marocains (DH). |
-| `anciennete_mois`| Numérique continu | Ancienneté du compte client en mois. |
-| `nb_ops_24h` | Numérique discret | Nombre d'opérations effectuées par le client sur les dernières 24h. |
-| `heure` | Numérique discret | Heure de la journée à laquelle la transaction a eu lieu (0 à 23). |
-| `canal` | Catégoriel | Canal utilisé : `application`, `site_web`, `agence`, `telephone`. |
-| `appareil` | Catégoriel | Terminal utilisé : `mobile`, `ordinateur`, `terminal`. |
-| `region` | Catégoriel | Région : `Casablanca-Settat`, `Marrakech-Safi`, `Souss-Massa`, `Draa-Tafilalet`, `Autre`. |
-| `international` | Catégoriel binaire | Indique si l'opération a une composante internationale (`oui` / `non`). |
-| `resultat_enquete`| Catégoriel (Post-incident) | Conclusion de l'enquête humaine (`aucune_fraude`, `fraude_confirmee`). |
-| `fraude` | Binaire (0 ou 1) | **Variable cible ($y$)** à prédire ($1 = \text{Fraude}$, $0 = \text{Légitime}$). |
+| `id_operation` | Identifiant | Cle technique arbitraire (exclue du modele). |
+| `id_client` | Identifiant | Identifiant client (exclu du modele). |
+| `montant_dh` | Numerique continu | Montant de la transaction en Dirhams marocains (DH). |
+| `anciennete_mois` | Numerique continu | Anciennete du compte client en mois. |
+| `nb_ops_24h` | Numerique discret | Nombre d'operations effectuees au cours des 24 dernieres heures. |
+| `heure` | Numerique discret | Heure de la transaction (de 0 a 23). |
+| `canal` | Categoriel | Canal utilise : application, site_web, agence, telephone. |
+| `appareil` | Categoriel | Terminal : mobile, ordinateur, terminal. |
+| `region` | Categoriel | Region : Casablanca-Settat, Marrakech-Safi, Souss-Massa, Draa-Tafilalet, Autre. |
+| `international` | Categoriel binaire | Indicateur d'operation internationale (oui / non). |
+| `resultat_enquete`| Categoriel | Resultat post-incident (exclu pour eviter le Data Leakage). |
+| `fraude` | Binaire (0 ou 1) | Variable cible (1 = Fraude, 0 = Legitime). |
 
 ---
 
-## 🛠️ Étapes Méthodologiques de Prétraitement
+## Etapes de Pretraitement
 
-### 1. Diagnostic Initial, Nettoyage & Prévention du Data Leakage
+### 1. Diagnostic Initial et Prevention du Data Leakage
 
-1. **Suppression des doublons** :
-   - Recherche systématique des répétitions sur `id_operation` et élimination des doublons pour éviter le surapprentissage d'opérations dupliquées.
-2. **Gestion des valeurs manquantes** :
-   - Identification des colonnes présentant des valeurs nulles (`montant_dh`, `anciennete_mois`, `nb_ops_24h`, `canal`, `appareil`, `region`).
-3. **Exclusion des identifiants et des variables de fuite (*Target / Data Leakage*)** :
-   - **`id_operation` et `id_client`** sont exclus : ce sont des clés arbitraires sans pouvoir prédictif généralisable.
-   - **`resultat_enquete`** est strictement retiré des variables d'entrée ($X$) : cette information n'est connue **qu'après** l'enquête menée suite à la transaction. L'inclure donnerait directement la réponse au modèle (100% de précision artificielle à l'entraînement, mais inutilisable en temps réel).
+- **Suppression des doublons** : Elimination des transactions dupliquees basees sur `id_operation`.
+- **Valeurs manquantes** : Identification des colonnes a completer (imputation par mediane pour les nombres, par mode pour les categories).
+- **Prevention du Data Leakage** :
+  - `id_operation` et `id_client` sont retires car ils ne contiennent pas de signal generalisable.
+  - `resultat_enquete` est retire car cette donnee n'est disponible qu'apres l'investigation humaine. L'inclure fausserait totalement l'apprentissage en donnant la reponse au modele.
 
 ---
 
-### 2. Analyse de la Distribution et Gestion des Valeurs Extrêmes (*Outliers*)
+### 2. Distribution des Montants et Traitement des Outliers
 
-La variable financière `montant_dh` présente une forte asymétrie droite avec des transactions de plusieurs milliers de DH alors que le cœur des transactions se situe sous les 1200 DH :
+La variable `montant_dh` est asymetrique avec une longue queue vers les valeurs elevees :
 
-| Distribution du Montant | Boxplot des Valeurs Extrêmes |
+| Distribution du Montant | Boxplot des Outliers |
 | :---: | :---: |
 | ![Distribution Montant](images/distribution_montant.png) | ![Boxplot Montant](images/boxplot_montant.png) |
 
-#### Calculs statistiques IQR :
-- **$Q_1$ (25e percentile)** : $384.27\text{ DH}$
-- **Médiane (50e percentile)** : $706.80\text{ DH}$
-- **$Q_3$ (75e percentile)** : $1244.90\text{ DH}$
-- **$\text{IQR} = Q_3 - Q_1$** : $860.63\text{ DH}$
-- **Seuil haut ($L_2 = Q_3 + 1.5 \times \text{IQR}$)** : $2535.85\text{ DH}$
+#### Reperes statistiques IQR :
+- Q1 (25%) : 384.27 DH
+- Mediane (50%) : 706.80 DH
+- Q3 (75%) : 1244.90 DH
+- IQR : 860.63 DH
+- Seuil superieur L2 (Q3 + 1.5 * IQR) : 2535.85 DH
 
-#### Arbitrage Métier : Option A vs Option B
+#### Comparaison : Option A vs Option B
 
-| Option A : Conservation des montants d'origine | Option B : Écrêtage au seuil $L_2$ (2535.85 DH) |
+| Option A : Conservation des montants reels | Option B : Ecretage au seuil L2 (2535.85 DH) |
 | :---: | :---: |
 | ![Option A vs Option B](images/gestion_outliers_option_a_vs_b.png) |
 
-- **Pourquoi les montants extrêmes ne sont pas de simples erreurs ?**
-  En milieu bancaire, des montants élevés correspondent souvent à des achats légitimes majeurs ou au contraire à des attaques frauduleuses ciblées. Supprimer ces lignes masquerait le signal d'alerte.
-- **Décision** : Utiliser un scaler robuste (**RobustScaler**) qui permet de conserver l'information des montants réels (Option A) sans laisser les outliers déformer la mise à l'échelle des transactions ordinaires.
+- **Choix retenu** : Dans la detection de fraude, les montants atypiques portent un signal essentiel. Nous conservons les montants reels (Option A) et utilisons un scaler insensible aux valeurs extremes.
 
 ---
 
-### 3. Comparaison des Méthodes de Normalisation / Mise à l'Échelle
+### 3. Comparaison des Methodes de Mise a l'Echelle
 
-Trois stratégies ont été comparées sur les variables continues :
+Trois transformateurs ont ete compares pour les variables numeriques :
 
-![Comparaison Scalers](images/comparaison_scalers.png)
+![Comparaison des Scalers](images/comparaison_scalers.png)
 
-1. **StandardScaler ($\frac{x - \mu}{\sigma}$)** :
-   - Très sensible aux valeurs extrêmes : $\mu$ et $\sigma$ sont tirés vers le haut, écrasant les transactions ordinaires près de zéro.
-2. **MinMaxScaler ($\frac{x - x_{min}}{x_{max} - x_{min}}$)** :
-   - Fortement contraint par le montant maximal (> 30 000 DH), comprimant l'immense majorité des données dans un intervalle étroit $[0, 0.1]$.
-3. **RobustScaler ($\frac{x - \text{médiane}}{\text{IQR}}$) — Choix Retenu** :
-   - La médiane et l'IQR étant insensibles aux outliers, l'échelle reste stable et représentative de la majorité des transactions normales (médiane fixée à 0).
+1. **StandardScaler** : Sensible aux valeurs extremes, la moyenne et l'ecart-type sont tires vers le haut, ce qui ecrase les valeurs courantes pres de zero.
+2. **MinMaxScaler** : Sensible aux montants maximums (> 30 000 DH), comprimant la majorite des observations dans un intervalle tres reduit.
+3. **RobustScaler (Choix retenu)** : Utilise la mediane et l'ecart interquartile (IQR). Les valeurs ordinaires restent centrees autour de 0 sans deformation due aux montants eleves.
 
 ---
 
-### 4. Gestion du Déséquilibre des Classes
+### 4. Gestion du Desequilibre des Classes
 
-Dans le jeu de données, les transactions frauduleuses sont minoritaires (~10% de fraudes) :
+Les fraudes representent environ 10 % des transactions :
 
-| Classes Initiales | Répartition dans l'échantillon d'entraînement | Équilibrage par OverSampling |
+| Classes Initiales | Echantillon Train | Re-echantillonnage (OverSampling) |
 | :---: | :---: | :---: |
 | ![Classes Initiales](images/equilibre_classes_initial.png) | ![Classes Train](images/equilibre_classes_train.png) | ![OverSampling](images/oversampling_equilibre.png) |
 
-- **Traitement** : Utilisation de techniques de sur-échantillonnage (*RandomOverSampler* ou *SMOTE-NC*) appliquées **uniquement sur l'ensemble d'entraînement (`X_train`)** pour éviter la contamination du jeu de test.
+Le sur-echantillonnage (RandomOverSampler / SMOTE-NC) est applique exclusivement sur `X_train` afin de preserver l'integrite du jeu de test.
 
 ---
 
-### 5. Pipeline Final & Sérialisation Scikit-Learn
+### 5. Pipeline Final et Exportation
 
-Le prétraitement complet est encapsulé dans un `ColumnTransformer` scikit-learn :
-- **Branche Numérique** : `SimpleImputer(strategy='median')` $\rightarrow$ `RobustScaler()`
-- **Branche Catégorielle** : `SimpleImputer(strategy='most_frequent')` $\rightarrow$ `OneHotEncoder(handle_unknown='ignore')`
+Le pipeline complet est construit avec `ColumnTransformer` :
+- **Numerique** : `SimpleImputer(strategy='median')` -> `RobustScaler()`
+- **Categoriel** : `SimpleImputer(strategy='most_frequent')` -> `OneHotEncoder(handle_unknown='ignore')`
 
-#### Robustesse en production :
-- Le paramètre `handle_unknown='ignore'` garantit que toute modalité jamais observée à l'entraînement (ex: un nouveau canal de paiement) sera encodée par des zéros sans provoquer de plantage applicatif.
-- L'ensemble du transformateur est exporté et rechargeable avec `joblib` :
-  ```python
-  import joblib
-  joblib.dump(full_pipeline, 'preprocessor_transactions.joblib')
-  ```
+Le parametre `handle_unknown='ignore'` permet au modele de traiter de nouvelles categories sans lever d'erreur en production.
+
+Le preprocesseur est sauvegarde avec `joblib` :
+
+```python
+import joblib
+joblib.dump(full_pipeline, 'preprocessor_transactions.joblib')
+```
 
 ---
 
-## 📁 Structure du Projet
+## Structure du Projet
 
 ```
 transactions-dataset-preprocessing/
-├── images/
-│   ├── distribution_montant.png
-│   ├── boxplot_montant.png
-│   ├── gestion_outliers_option_a_vs_b.png
-│   ├── comparaison_scalers.png
-│   ├── equilibre_classes_initial.png
-│   ├── equilibre_classes_train.png
-│   └── oversampling_equilibre.png
-├── .gitignore
-├── pretraitement-dataset-transactions.ipynb
-├── README.md
-└── transactions-dataset.csv
+|-- images/
+|   |-- boxplot_montant.png
+|   |-- comparaison_scalers.png
+|   |-- distribution_montant.png
+|   |-- equilibre_classes_initial.png
+|   |-- equilibre_classes_train.png
+|   |-- gestion_outliers_option_a_vs_b.png
+|   `-- oversampling_equilibre.png
+|-- .gitignore
+|-- pretraitement-dataset-transactions.ipynb
+|-- README.md
+`-- transactions-dataset.csv
 ```
 
 ---
 
-## 🚀 Utilisation
+## Utilisation
 
-Pour exécuter le notebook localement ou dans Google Colab :
+Pour executer le notebook :
 
 ```bash
-# Cloner le dépôt
+# Cloner le depot
 git clone https://github.com/abdelhamid-elmghari/regression-lab.git
 
-# Accéder au dossier du projet
+# Se deplacer dans le dossier
 cd regression-lab/"practical projects"/transactions-dataset-preprocessing
 
-# Lancer Jupyter Notebook
+# Lancer Jupyter
 jupyter notebook pretraitement-dataset-transactions.ipynb
 ```
